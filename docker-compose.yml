@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  leadflowx-config-service:
+    build: .
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/leadflowx
+      - API_KEY=leadflowx-api-key-2025
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+    networks:
+      - leadflowx-network
+    ports:
+      - "8080:8080"
+
+networks:
+  leadflowx-network:
+    external: true

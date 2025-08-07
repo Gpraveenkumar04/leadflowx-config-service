@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+provider = "postgresql"
+url      = env("DB_URL")
+}
+
+model RawLead {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  company   String
+  website   String
+  phone     String
+  createdAt DateTime @default(now()) @map("created_at")
+  correlationId String @map("correlation_id")
+
+  @@map("raw_leads")
+}
+model DlqLead {
+  id            Int      @id @default(autoincrement())
+  email         String
+  name          String?
+  company       String
+  website       String
+  phone         String
+  correlationId String @map("correlation_id")
+  error         String
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("dlq_leads")
+}
+
+model Config {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String?
+}

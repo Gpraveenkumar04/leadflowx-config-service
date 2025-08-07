@@ -1,0 +1,17 @@
+{
+  "name": "ingestion-api",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "fastify": "^4.0.0",
+    "kafkajs": "^2.2.4",
+    "prom-client": "^15.1.3",
+    "uuid": "^11.1.0",
+    "ajv": "^8.12.0",
+    "ajv-formats": "^2.1.1"
+  }
+}
