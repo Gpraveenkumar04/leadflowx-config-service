@@ -10,6 +10,11 @@ import client from 'prom-client';
 const fastify = Fastify({ logger: true });
 const prisma = new PrismaClient();
 
+// Ensure Prisma sees DB_URL even if only DATABASE_URL is provided
+if (!process.env.DB_URL && process.env.DATABASE_URL) {
+  process.env.DB_URL = process.env.DATABASE_URL; // For schema.prisma env("DB_URL")
+}
+
 // API Key for authentication (in production, use environment variable)
 const API_KEY = process.env.API_KEY || 'leadflowx-api-key-2025';
 
@@ -38,6 +43,76 @@ fastify.get('/health', async (req, reply) => {
 fastify.get('/metrics', async (req, reply) => {
   reply.header('Content-Type', client.register.contentType);
   reply.send(await client.register.metrics());
+});
+
+// Leads listing & dashboard support endpoints (UI compatibility)
+fastify.get('/api/leads', async (req, reply) => {
+  const page = parseInt(req.query.page) || 1;
+  const pageSize = Math.min(parseInt(req.query.pageSize) || 25, 200);
+  const search = req.query.search;
+  const dateFrom = req.query.dateFrom;
+  const dateTo = req.query.dateTo;
+
+  const where = {};
+  if (search) {
+    // Simple OR filter across key text fields
+    where.OR = [
+      { email: { contains: search, mode: 'insensitive' } },
+      { name: { contains: search, mode: 'insensitive' } },
+      { company: { contains: search, mode: 'insensitive' } },
+      { website: { contains: search, mode: 'insensitive' } }
+    ];
+  }
+  if (dateFrom || dateTo) {
+    where.createdAt = {};
+    if (dateFrom) where.createdAt.gte = new Date(dateFrom);
+    if (dateTo) where.createdAt.lte = new Date(dateTo);
+  }
+
+  const total = await prisma.rawLead.count({ where });
+  const totalPages = total ? Math.ceil(total / pageSize) : 0;
+  const leads = await prisma.rawLead.findMany({
+    where,
+    orderBy: { id: 'desc' },
+    skip: (page - 1) * pageSize,
+    take: pageSize
+  });
+
+  // Map to UI shape (adding optional fields)
+  const data = leads.map(l => ({
+    id: l.id,
+    email: l.email,
+    name: l.name,
+    company: l.company,
+    website: l.website,
+    phone: l.phone,
+    correlationId: l.correlationId,
+    createdAt: l.createdAt,
+    scrapedAt: l.createdAt,
+    source: 'google_maps'
+  }));
+
+  return {
+    success: true,
+    data,
+    pagination: { page, pageSize, total, totalPages }
+  };
+});
+
+fastify.get('/api/leads/raw/count', async () => {
+  const count = await prisma.rawLead.count();
+  return { success: true, data: { count } };
+});
+
+fastify.get('/api/leads/by-source', async () => {
+  // All current leads considered google_maps; adapt when multi-source persists.
+  const count = await prisma.rawLead.count();
+  return { success: true, data: [{ source: 'google_maps', count }] };
+});
+
+fastify.get('/api/leads/status-funnel', async () => {
+  const raw = await prisma.rawLead.count();
+  return { success: true, data: { raw, verified: 0, audited: 0, qaPassed: 0, scored: 0 } };
 });
 
 let producer = null;
