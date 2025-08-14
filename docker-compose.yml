@@ -29,7 +29,7 @@ services:
     networks:
       - leadflowx-network
     ports:
-      - "8080:8080"
+      - "8081:8080"
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.1
     environment:
@@ -58,3 +58,4 @@ networks:
   leadflowx-network:
     external: true
     name: leadflowx-network
+
