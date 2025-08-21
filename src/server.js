@@ -69,11 +69,19 @@ fastify.get('/api/leads', async (req, reply) => {
     if (dateTo) where.createdAt.lte = new Date(dateTo);
   }
 
+  // Get sort parameters
+  const sortField = req.query.sortField || 'createdAt';
+  const sortDirection = req.query.sortDirection || 'desc';
+
+  // Validate sort field to prevent injection
+  const allowedSortFields = ['id', 'createdAt', 'email', 'name', 'company', 'website'];
+  const actualSortField = allowedSortFields.includes(sortField) ? sortField : 'createdAt';
+
   const total = await prisma.rawLead.count({ where });
   const totalPages = total ? Math.ceil(total / pageSize) : 0;
   const leads = await prisma.rawLead.findMany({
     where,
-    orderBy: { id: 'desc' },
+    orderBy: { [actualSortField]: sortDirection.toLowerCase() },
     skip: (page - 1) * pageSize,
     take: pageSize
   });
